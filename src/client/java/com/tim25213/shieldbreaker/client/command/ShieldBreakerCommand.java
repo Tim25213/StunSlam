@@ -54,6 +54,30 @@ public final class ShieldBreakerCommand {
 						config.stunDurationSeconds = DoubleArgumentType.getDouble(ctx, "seconds");
 						return apply(ctx, config, "Stun tail set to %.2fs".formatted(config.stunDurationSeconds));
 					})))
+			.then(ClientCommands.literal("distance")
+				.then(ClientCommands.argument("blocks", DoubleArgumentType.doubleArg(0.5, 8.0))
+					.executes(ctx -> {
+						config.triggerDistance = DoubleArgumentType.getDouble(ctx, "blocks");
+						return apply(ctx, config, "Trigger distance set to %.1f blocks".formatted(config.triggerDistance));
+					})))
+			.then(ClientCommands.literal("spear")
+				.then(ClientCommands.literal("on").executes(ctx -> {
+					config.spearEnabled = true;
+					return apply(ctx, config, "Spear opener enabled");
+				}))
+				.then(ClientCommands.literal("off").executes(ctx -> {
+					config.spearEnabled = false;
+					return apply(ctx, config, "Spear opener disabled");
+				})))
+			.then(ClientCommands.literal("charge")
+				.then(ClientCommands.literal("on").executes(ctx -> {
+					config.chargeBeforeMace = true;
+					return apply(ctx, config, "Waiting for full charge before the mace hit");
+				}))
+				.then(ClientCommands.literal("off").executes(ctx -> {
+					config.chargeBeforeMace = false;
+					return apply(ctx, config, "Mace hit fires immediately after the sword");
+				})))
 			.then(ClientCommands.literal("counter")
 				.then(ClientCommands.literal("left")
 					.then(ClientCommands.literal("on").executes(ctx -> {

@@ -6,32 +6,19 @@ import java.util.Deque;
 public class ClickTracker {
 	private static final long WINDOW_NANOS = 1_000_000_000L;
 
-	private final Deque<Long> manualLeft = new ArrayDeque<>();
-	private final Deque<Long> manualRight = new ArrayDeque<>();
-	private final Deque<Long> automatedLeft = new ArrayDeque<>();
-	private final Deque<Long> automatedRight = new ArrayDeque<>();
+	private final Deque<Long> left = new ArrayDeque<>();
+	private final Deque<Long> right = new ArrayDeque<>();
 
-	public void record(boolean automated, boolean leftButton) {
-		window(automated, leftButton).addLast(System.nanoTime());
+	public void record(boolean leftButton) {
+		(leftButton ? left : right).addLast(System.nanoTime());
 	}
 
-	public double cps(boolean automated, boolean leftButton) {
-		Deque<Long> window = window(automated, leftButton);
-		trim(window);
-		return window.size();
-	}
-
-	private Deque<Long> window(boolean automated, boolean leftButton) {
-		if (automated) {
-			return leftButton ? automatedLeft : automatedRight;
-		}
-		return leftButton ? manualLeft : manualRight;
-	}
-
-	private static void trim(Deque<Long> window) {
+	public int cps(boolean leftButton) {
+		Deque<Long> window = leftButton ? left : right;
 		long cutoff = System.nanoTime() - WINDOW_NANOS;
 		while (!window.isEmpty() && window.peekFirst() < cutoff) {
 			window.removeFirst();
 		}
+		return window.size();
 	}
 }

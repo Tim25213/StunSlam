@@ -19,7 +19,10 @@ public class ShieldBreakerConfig {
 	public double cpsMax = 15.0;
 	public double stunCpsMin = 8.0;
 	public double stunCpsMax = 10.0;
-	public double stunDurationSeconds = 1.0;
+	public double stunDurationSeconds = 0.0;
+	public double triggerDistance = 5.0;
+	public boolean spearEnabled = false;
+	public boolean chargeBeforeMace = false;
 	public boolean counterLeft = true;
 	public boolean counterRight = false;
 	public int counterX = 4;

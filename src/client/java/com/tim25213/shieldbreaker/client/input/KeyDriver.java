@@ -5,8 +5,6 @@ import com.tim25213.shieldbreaker.client.mixin.KeyMappingAccessor;
 import net.minecraft.client.KeyMapping;
 
 public final class KeyDriver {
-	private static boolean driving;
-
 	private KeyDriver() {
 	}
 
@@ -16,16 +14,7 @@ public final class KeyDriver {
 			return;
 		}
 
-		driving = true;
-		try {
-			KeyMapping.click(bound);
-		} finally {
-			driving = false;
-		}
-	}
-
-	public static boolean isDriving() {
-		return driving;
+		KeyMapping.click(bound);
 	}
 
 	public static boolean isBoundTo(KeyMapping mapping, InputConstants.Key key) {
