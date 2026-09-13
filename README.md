@@ -15,10 +15,35 @@ reacts to the local player's own movement state.
 the stun-tail duration at the reduced stun CPS, then restores the original hotbar slot.
 The mace slot is never selected.
 
-**Automatic** — the full axe, sword, mace attribute swap. The axe phase runs as above;
-the moment the shield drops the mod swaps to a sword and lands one attack, then swaps
-to the mace and lands one attack, then restores the original hotbar slot. The stun-tail
-settings are not used in this mode.
+**Automatic** — the full axe, sword, mace attribute swap. The axe phase runs as above.
+When the shield drops the mod swap-attacks to a sword, waits for the sword's attack
+cooldown to charge past the strong-attack threshold, then swap-attacks to the mace and
+restores the original hotbar slot. The stun-tail settings are not used in this mode.
+
+### How the attribute swap works
+
+`Minecraft.tick()` runs `handleKeybinds()` before `tickEntities()`. The hotbar key and
+the attack key are both consumed inside that one `handleKeybinds()` call, and inside it
+`Inventory.setSelectedSlot` runs before `startAttack()`. Attack damage is scaled by
+`getCurrentItemAttackStrengthDelay()`, which is `20.0 / getAttributeValue(ATTACK_SPEED)`
+— a cached attribute that is only refreshed later, by `detectEquipmentUpdates()` during
+`tickEntities()`.
+
+So an attack issued in the same tick as the slot change is resolved with the previous
+item's attack speed and the new item's stack: the mace hit lands on the sword's much
+shorter cooldown. `MultiPlayerGameMode.attack()` calls `ensureHasSentCarriedItem()`
+before sending the attack packet, so the server sees the same ordering.
+
+The mod presses the hotbar key and the attack key in the same client tick to hit that
+window. Pressing them a tick apart is an ordinary swap and hit, because `Player.tick()`
+calls `resetAttackStrengthTicker()` as soon as it notices the held item changed.
+
+### Version warning
+
+Attribute swapping was removed in 26.2-pre2 and re-added in 26.2-pre3 "with the
+intention of fixing it in a future version". It works on 26.2 release. Expect it to stop
+working on a later version, at which point automatic mode degrades to a plain swap and
+hit while manual mode is unaffected.
 
 Either mode stops immediately, with no trailing clicks, if the player lands or stops
 carrying a mace. Automatic mode needs the sword and mace in the hotbar to swap to them;

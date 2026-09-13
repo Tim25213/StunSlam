@@ -22,8 +22,11 @@ public class SwapController {
 		AXE,
 		STUN_TAIL,
 		SWORD,
+		CHARGE,
 		MACE
 	}
+
+	private static final float STRONG_ATTACK_SCALE = 0.9f;
 
 	private final ShieldBreakerConfig config;
 	private final RandomGenerator jitter = RandomGenerator.getDefault();
@@ -67,8 +70,9 @@ public class SwapController {
 		switch (phase) {
 			case AXE -> tickAxe(client, player);
 			case STUN_TAIL -> tickStunTail(client);
-			case SWORD -> tickFinisher(client, player, Phase.MACE);
-			case MACE -> tickFinisher(client, player, Phase.IDLE);
+			case SWORD -> tickSword(client, player);
+			case CHARGE -> tickCharge(client, player);
+			case MACE -> stop(client);
 			default -> {
 			}
 		}
@@ -77,7 +81,7 @@ public class SwapController {
 	private void tickAxe(Minecraft client, LocalPlayer player) {
 		if (shieldJustDisabled(client)) {
 			if (config.mode == Mode.AUTOMATIC) {
-				enterSword(client, player);
+				enterSword();
 			} else {
 				phase = Phase.STUN_TAIL;
 				tailEndsAt = System.nanoTime() + (long) (config.stunDurationSeconds * 1_000_000_000L);
@@ -104,17 +108,24 @@ public class SwapController {
 		}
 	}
 
-	private void tickFinisher(Minecraft client, LocalPlayer player, Phase next) {
+	private void tickSword(Minecraft client, LocalPlayer player) {
 		if (System.nanoTime() < nextClickAt) {
 			return;
 		}
 
-		KeyDriver.click(client.options.keyAttack);
-
-		if (next == Phase.MACE) {
+		int swordSlot = findHotbarSlot(player, ItemTags.SWORDS);
+		if (swordSlot < 0) {
 			enterMace(client, player);
-		} else {
-			stop(client);
+			return;
+		}
+
+		swapAttack(client, swordSlot);
+		phase = Phase.CHARGE;
+	}
+
+	private void tickCharge(Minecraft client, LocalPlayer player) {
+		if (player.getAttackStrengthScale(0.5f) > STRONG_ATTACK_SCALE) {
+			enterMace(client, player);
 		}
 	}
 
@@ -131,15 +142,8 @@ public class SwapController {
 		scheduleClick(config.cpsMin, config.cpsMax);
 	}
 
-	private void enterSword(Minecraft client, LocalPlayer player) {
-		int swordSlot = findHotbarSlot(player, ItemTags.SWORDS);
-		if (swordSlot < 0) {
-			enterMace(client, player);
-			return;
-		}
-
+	private void enterSword() {
 		phase = Phase.SWORD;
-		KeyDriver.click(client.options.keyHotbarSlots[swordSlot]);
 		scheduleClick(config.cpsMin, config.cpsMax);
 	}
 
@@ -151,8 +155,12 @@ public class SwapController {
 		}
 
 		phase = Phase.MACE;
-		KeyDriver.click(client.options.keyHotbarSlots[maceSlot]);
-		scheduleClick(config.cpsMin, config.cpsMax);
+		swapAttack(client, maceSlot);
+	}
+
+	private void swapAttack(Minecraft client, int slot) {
+		KeyDriver.click(client.options.keyHotbarSlots[slot]);
+		KeyDriver.click(client.options.keyAttack);
 	}
 
 	private void stop(Minecraft client) {
