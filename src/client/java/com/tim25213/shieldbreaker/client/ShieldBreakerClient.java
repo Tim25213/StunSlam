@@ -25,6 +25,8 @@ public class ShieldBreakerClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(CONTROLLER::tick);
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> ShieldBreakerCommand.register(dispatcher, context, CONFIG));
 		HudElementRegistry.addLast(ShieldBreaker.id("cps_counter"), new CpsHudElement(CONFIG, CONTROLLER, TRACKER));
+
+		ShieldBreaker.LOGGER.info("Ready in {} mode", CONFIG.mode.name().toLowerCase());
 	}
 
 	public static void onKeyClicked(InputConstants.Key key) {
