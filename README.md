@@ -52,7 +52,7 @@ a missing sword is skipped and a missing mace ends the sequence.
 ## Requirements
 
 - Minecraft 26.2
-- Fabric Loader 0.19.5+
+- Fabric Loader 0.18.4+
 - Fabric API 0.160.0+26.2
 - Java 25
 
