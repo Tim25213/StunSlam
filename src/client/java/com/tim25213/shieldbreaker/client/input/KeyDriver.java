@@ -8,15 +8,6 @@ public final class KeyDriver {
 	private KeyDriver() {
 	}
 
-	public static void click(KeyMapping mapping) {
-		InputConstants.Key bound = ((KeyMappingAccessor) (Object) mapping).shieldbreaker$boundKey();
-		if (bound.equals(InputConstants.UNKNOWN)) {
-			return;
-		}
-
-		KeyMapping.click(bound);
-	}
-
 	public static boolean isBoundTo(KeyMapping mapping, InputConstants.Key key) {
 		return ((KeyMappingAccessor) (Object) mapping).shieldbreaker$boundKey().equals(key);
 	}
