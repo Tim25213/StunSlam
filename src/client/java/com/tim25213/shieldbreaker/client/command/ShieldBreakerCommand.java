@@ -2,8 +2,8 @@ package com.tim25213.shieldbreaker.client.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.tim25213.shieldbreaker.client.config.Mode;
 import com.tim25213.shieldbreaker.client.config.ShieldBreakerConfig;
@@ -26,57 +26,20 @@ public final class ShieldBreakerCommand {
 			.then(ClientCommands.literal("mode")
 				.then(ClientCommands.literal("manual").executes(ctx -> {
 					config.mode = Mode.MANUAL;
-					return apply(ctx, config, "Mode set to manual: axe only, shield disable");
+					return apply(ctx, config, "Mode set to manual: axe swap on blocking targets only");
 				}))
 				.then(ClientCommands.literal("automatic").executes(ctx -> {
 					config.mode = Mode.AUTOMATIC;
-					return apply(ctx, config, "Mode set to automatic: axe, sword, mace");
+					return apply(ctx, config, "Mode set to automatic: axe on block, damage swap otherwise");
 				})))
-			.then(ClientCommands.literal("cps")
-				.then(ClientCommands.argument("min", DoubleArgumentType.doubleArg(1.0, 20.0))
-					.then(ClientCommands.argument("max", DoubleArgumentType.doubleArg(1.0, 20.0))
-						.executes(ctx -> {
-							config.cpsMin = DoubleArgumentType.getDouble(ctx, "min");
-							config.cpsMax = DoubleArgumentType.getDouble(ctx, "max");
-							return apply(ctx, config, "Swap CPS set to %.1f-%.1f".formatted(config.cpsMin, config.cpsMax));
-						}))))
-			.then(ClientCommands.literal("stuncps")
-				.then(ClientCommands.argument("min", DoubleArgumentType.doubleArg(1.0, 20.0))
-					.then(ClientCommands.argument("max", DoubleArgumentType.doubleArg(1.0, 20.0))
-						.executes(ctx -> {
-							config.stunCpsMin = DoubleArgumentType.getDouble(ctx, "min");
-							config.stunCpsMax = DoubleArgumentType.getDouble(ctx, "max");
-							return apply(ctx, config, "Stun-tail CPS set to %.1f-%.1f".formatted(config.stunCpsMin, config.stunCpsMax));
-						}))))
-			.then(ClientCommands.literal("stunduration")
-				.then(ClientCommands.argument("seconds", DoubleArgumentType.doubleArg(0.0, 10.0))
-					.executes(ctx -> {
-						config.stunDurationSeconds = DoubleArgumentType.getDouble(ctx, "seconds");
-						return apply(ctx, config, "Stun tail set to %.2fs".formatted(config.stunDurationSeconds));
-					})))
-			.then(ClientCommands.literal("distance")
-				.then(ClientCommands.argument("blocks", DoubleArgumentType.doubleArg(0.5, 8.0))
-					.executes(ctx -> {
-						config.triggerDistance = DoubleArgumentType.getDouble(ctx, "blocks");
-						return apply(ctx, config, "Trigger distance set to %.1f blocks".formatted(config.triggerDistance));
-					})))
 			.then(ClientCommands.literal("spear")
 				.then(ClientCommands.literal("on").executes(ctx -> {
 					config.spearEnabled = true;
-					return apply(ctx, config, "Spear opener enabled");
+					return apply(ctx, config, "Damage swap uses a spear");
 				}))
 				.then(ClientCommands.literal("off").executes(ctx -> {
 					config.spearEnabled = false;
-					return apply(ctx, config, "Spear opener disabled");
-				})))
-			.then(ClientCommands.literal("charge")
-				.then(ClientCommands.literal("on").executes(ctx -> {
-					config.chargeBeforeMace = true;
-					return apply(ctx, config, "Waiting for full charge before the mace hit");
-				}))
-				.then(ClientCommands.literal("off").executes(ctx -> {
-					config.chargeBeforeMace = false;
-					return apply(ctx, config, "Mace hit fires immediately after the sword");
+					return apply(ctx, config, "Damage swap uses the mace");
 				})))
 			.then(ClientCommands.literal("counter")
 				.then(ClientCommands.literal("left")
@@ -118,7 +81,7 @@ public final class ShieldBreakerCommand {
 						})))));
 	}
 
-	private static com.mojang.brigadier.builder.LiteralArgumentBuilder<FabricClientCommandSource> nudge(String name, int stepX, int stepY, ShieldBreakerConfig config) {
+	private static LiteralArgumentBuilder<FabricClientCommandSource> nudge(String name, int stepX, int stepY, ShieldBreakerConfig config) {
 		return ClientCommands.literal(name)
 			.then(ClientCommands.argument("amount", IntegerArgumentType.integer(1))
 				.executes(ctx -> {

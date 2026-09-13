@@ -2,63 +2,50 @@
 
 Client-side Fabric mod for Minecraft 26.2.
 
-ShieldBreaker reacts to the local player's own state. It engages only while the player
-is **airborne, moving downward, and already aiming at a living entity within a set
-distance** — so a plain jump, a wind charge or eating a gapple never triggers it.
+ShieldBreaker never clicks for you and never touches your aim. It hooks the attack you
+already made and swaps your hotbar slot inside that same attack, so the hit lands with a
+different item than the one you are holding.
 
-It never touches look direction, camera, rotation or target selection. The target is read
-from the crosshair the player is already pointing; the mod never picks or changes it.
+When you attack a living entity:
 
-## Modes
+- if the target is **blocking**, the mod swaps to an axe for that hit and swaps straight
+  back, so your own click breaks the shield while you keep the mace selected
+- in **automatic** mode, when the target is not blocking, it swaps to the mace (or a
+  spear with `spear on`) for the hit and swaps back
 
-**Manual** (default) — axe only. It swaps to an axe and attacks until the target's shield
-drops, then restores the original hotbar slot immediately so the mace hit is yours to
-land. Set `stunduration` above 0 if you want it to keep clicking after the shield breaks.
+You aim, you click, you decide when. The mod only chooses which item the hit resolves
+with.
 
-**Automatic** — the full attribute-swap chain. Axe until the shield drops, then a
-same-tick swap-attack to the sword, then to the mace, then the original slot is restored.
-With `spear on` and a spear in the hotbar, a spear swap-attack opens the chain when the
-target is more than 3 blocks away.
+## How it works
 
-Either mode stops immediately if the player lands or stops carrying a mace. Attacks are
-only issued while the crosshair is on the target — see below for why that matters.
+`MultiPlayerGameMode.attack(Player, Entity)` runs only when your attack actually lands on
+an entity. The mod injects at its head, cancels the original call, selects the swap slot
+(`Inventory.setSelectedSlot` plus a `ServerboundSetCarriedItemPacket` so the server sees
+the change first), re-invokes the real attack, then restores the slot — all synchronously
+inside that one call, so the swap and the attack are guaranteed to share a tick.
 
-### Why it never swings at air
-
-`Minecraft.startAttack()` sets `missTime = 10` whenever the attack lands on nothing. For
-those 10 ticks every further attack returns immediately, so clicking into empty air does
-not just waste a click, it blocks the hits that follow. The mod therefore issues an
-attack only when `crosshairPickEntity` is a living entity inside `distance`.
-
-### How the attribute swap works
-
-`Minecraft.tick()` runs `handleKeybinds()` before `tickEntities()`. The hotbar key and
-the attack key are both consumed inside that one `handleKeybinds()` call, and inside it
-`Inventory.setSelectedSlot` runs before `startAttack()`. Attack damage is scaled by
+That tick equality is what makes it an attribute swap. Attack damage is scaled by
 `getCurrentItemAttackStrengthDelay()`, which is `20.0 / getAttributeValue(ATTACK_SPEED)`
-— a cached attribute that is only refreshed later, by `detectEquipmentUpdates()` during
-`tickEntities()`.
+— a cached attribute refreshed only later, by `detectEquipmentUpdates()` during
+`tickEntities()`. So the hit resolves with the held item's attack speed and the swapped
+item's stack. The Attribute Swap Indicator mod judges a swap successful with exactly this
+rule: `hotbarTick() == addTick() && attackTick() == addTick()`.
 
-So an attack issued in the same tick as the slot change is resolved with the previous
-item's attack speed and the new item's stack. `MultiPlayerGameMode.attack()` calls
-`ensureHasSentCarriedItem()` before sending the attack packet, so the server sees the
-same ordering. The Attribute Swap Indicator mod judges a swap successful with exactly
-this rule: `hotbarTick() == addTick() && attackTick() == addTick()`.
+Because the mod rides a real attack it never swings at air, which matters:
+`Minecraft.startAttack()` sets `missTime = 10` on a miss, and for those ten ticks every
+further attack returns immediately.
 
-`charge on` makes the mace step wait until the sword's cooldown passes the strong-attack
-threshold, which hits harder but costs about half a second — usually longer than a fall
-allows, so it is off by default.
+### Spear
+
+`spear on` makes the damage swap use a spear instead of the mace. It does **not** extend
+your reach: vanilla has already chosen the target before `attack` runs, so swapping at
+that point changes the item the hit resolves with, not how far you can reach.
 
 ### Version warning
 
-Attribute swapping was removed in 26.2-pre2 and re-added in 26.2-pre3 "with the
-intention of fixing it in a future version". It works on 26.2 release. Expect it to stop
-working on a later version, at which point automatic mode degrades to a plain swap and
-hit while manual mode is unaffected.
-
-Either mode stops immediately, with no trailing clicks, if the player lands or stops
-carrying a mace. Automatic mode needs the sword and mace in the hotbar to swap to them;
-a missing sword is skipped and a missing mace ends the sequence.
+Attribute swapping was removed in 26.2-pre2 and re-added in 26.2-pre3 "with the intention
+of fixing it in a future version". It works on 26.2 release. Expect it to stop working on
+a later version, at which point the swap degrades to an ordinary item switch.
 
 ## Requirements
 
@@ -80,13 +67,8 @@ The mod jar lands in `build/libs/`.
 | Command | Effect |
 | --- | --- |
 | `/shieldbreaker toggle` | Enable or disable the mod |
-| `/shieldbreaker mode <manual\|automatic>` | Axe only, or the axe-sword-mace combo |
-| `/shieldbreaker cps <min> <max>` | Attack CPS range while swapped to the axe |
-| `/shieldbreaker stuncps <min> <max>` | Attack CPS range during the post-stun tail (manual mode) |
-| `/shieldbreaker stunduration <seconds>` | Length of the post-stun tail (manual mode) |
-| `/shieldbreaker distance <blocks>` | How close the target must be to engage |
-| `/shieldbreaker spear <on\|off>` | Open the automatic chain with a spear |
-| `/shieldbreaker charge <on\|off>` | Wait for full charge before the mace hit |
+| `/shieldbreaker mode <manual\|automatic>` | Axe on blocking targets only, or also swap for damage |
+| `/shieldbreaker spear <on\|off>` | Damage swap uses a spear instead of the mace |
 | `/shieldbreaker counter left <on\|off>` | Show or hide the left-click CPS readout |
 | `/shieldbreaker counter right <on\|off>` | Show or hide the right-click CPS readout |
 | `/shieldbreaker counter pos <x> <y>` | Absolute screen position |
@@ -97,21 +79,15 @@ Settings are written to `config/shieldbreaker.json` on every change.
 
 ## CPS counter
 
-Plain clicks per second over the last second, counting every click whatever its source.
-With both buttons enabled it reads `3|2 cps`, left then right; with one enabled it reads
-`3 cps`.
+Plain clicks per second over the last second. With both buttons enabled it reads
+`3|2 cps`, left then right; with one enabled it reads `3 cps`.
 
 ## Defaults
 
 | Setting | Default |
 | --- | --- |
 | Mode | manual |
-| Trigger distance | 5.0 blocks |
-| Spear opener | off |
-| Charge before mace | off |
-| Swap CPS | 10.0 – 15.0 |
-| Stun-tail CPS | 8.0 – 10.0 |
-| Stun-tail duration | 0.0s |
+| Spear damage swap | off |
 | Left counter | on |
 | Right counter | off |
 | Position | 4, 4 |
