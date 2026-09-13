@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.tim25213.shieldbreaker.client.config.Mode;
 import com.tim25213.shieldbreaker.client.config.ShieldBreakerConfig;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -22,6 +23,15 @@ public final class ShieldBreakerCommand {
 					config.enabled = !config.enabled;
 					return apply(ctx, config, "ShieldBreaker " + (config.enabled ? "enabled" : "disabled"));
 				}))
+			.then(ClientCommands.literal("mode")
+				.then(ClientCommands.literal("manual").executes(ctx -> {
+					config.mode = Mode.MANUAL;
+					return apply(ctx, config, "Mode set to manual: axe only, shield disable");
+				}))
+				.then(ClientCommands.literal("automatic").executes(ctx -> {
+					config.mode = Mode.AUTOMATIC;
+					return apply(ctx, config, "Mode set to automatic: axe, sword, mace");
+				})))
 			.then(ClientCommands.literal("cps")
 				.then(ClientCommands.argument("min", DoubleArgumentType.doubleArg(1.0, 20.0))
 					.then(ClientCommands.argument("max", DoubleArgumentType.doubleArg(1.0, 20.0))

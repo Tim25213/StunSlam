@@ -3,12 +3,26 @@
 Client-side Fabric mod for Minecraft 26.2.
 
 While the local player is airborne and carrying a mace, ShieldBreaker presses the
-hotbar key bound to an axe and drives the attack key at a randomized CPS. When the
-target's shield drops out of a block, it keeps clicking briefly at a lower rate and
-then restores the original hotbar slot.
+hotbar key bound to an axe and drives the attack key at a randomized CPS until the
+target's shield drops out of a block. What happens next depends on the mode.
 
-The mod never touches look direction, camera, rotation or target selection, and never
-selects the mace slot. It only reacts to the local player's own movement state.
+The mod never touches look direction, camera, rotation or target selection. It only
+reacts to the local player's own movement state.
+
+## Modes
+
+**Manual** (default) — axe only. Once the shield is disabled the mod keeps clicking for
+the stun-tail duration at the reduced stun CPS, then restores the original hotbar slot.
+The mace slot is never selected.
+
+**Automatic** — the full axe, sword, mace attribute swap. The axe phase runs as above;
+the moment the shield drops the mod swaps to a sword and lands one attack, then swaps
+to the mace and lands one attack, then restores the original hotbar slot. The stun-tail
+settings are not used in this mode.
+
+Either mode stops immediately, with no trailing clicks, if the player lands or stops
+carrying a mace. Automatic mode needs the sword and mace in the hotbar to swap to them;
+a missing sword is skipped and a missing mace ends the sequence.
 
 ## Requirements
 
@@ -30,9 +44,10 @@ The mod jar lands in `build/libs/`.
 | Command | Effect |
 | --- | --- |
 | `/shieldbreaker toggle` | Enable or disable the mod |
+| `/shieldbreaker mode <manual\|automatic>` | Axe only, or the axe-sword-mace combo |
 | `/shieldbreaker cps <min> <max>` | Attack CPS range while swapped to the axe |
-| `/shieldbreaker stuncps <min> <max>` | Attack CPS range during the post-stun tail |
-| `/shieldbreaker stunduration <seconds>` | Length of the post-stun tail |
+| `/shieldbreaker stuncps <min> <max>` | Attack CPS range during the post-stun tail (manual mode) |
+| `/shieldbreaker stunduration <seconds>` | Length of the post-stun tail (manual mode) |
 | `/shieldbreaker counter left <on\|off>` | Show or hide the left-click CPS readout |
 | `/shieldbreaker counter right <on\|off>` | Show or hide the right-click CPS readout |
 | `/shieldbreaker counter pos <x> <y>` | Absolute screen position |
@@ -54,6 +69,7 @@ The active source is marked by a tag and a colour:
 
 | Setting | Default |
 | --- | --- |
+| Mode | manual |
 | Swap CPS | 10.0 – 15.0 |
 | Stun-tail CPS | 8.0 – 10.0 |
 | Stun-tail duration | 1.0s |

@@ -14,6 +14,7 @@ public class ShieldBreakerConfig {
 	private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("shieldbreaker.json");
 
 	public boolean enabled = true;
+	public Mode mode = Mode.MANUAL;
 	public double cpsMin = 10.0;
 	public double cpsMax = 15.0;
 	public double stunCpsMin = 8.0;

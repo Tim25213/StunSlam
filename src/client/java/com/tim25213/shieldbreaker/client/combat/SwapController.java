@@ -1,13 +1,16 @@
 package com.tim25213.shieldbreaker.client.combat;
 
+import com.tim25213.shieldbreaker.client.config.Mode;
 import com.tim25213.shieldbreaker.client.config.ShieldBreakerConfig;
 import com.tim25213.shieldbreaker.client.input.KeyDriver;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -16,8 +19,10 @@ import java.util.random.RandomGenerator;
 public class SwapController {
 	private enum Phase {
 		IDLE,
-		ACTIVE,
-		STUN_TAIL
+		AXE,
+		STUN_TAIL,
+		SWORD,
+		MACE
 	}
 
 	private final ShieldBreakerConfig config;
@@ -59,37 +64,94 @@ public class SwapController {
 			return;
 		}
 
-		if (phase == Phase.ACTIVE && shieldJustDisabled(client)) {
-			phase = Phase.STUN_TAIL;
-			tailEndsAt = System.nanoTime() + (long) (config.stunDurationSeconds * 1_000_000_000L);
-			scheduleClick(config.stunCpsMin, config.stunCpsMax);
+		switch (phase) {
+			case AXE -> tickAxe(client, player);
+			case STUN_TAIL -> tickStunTail(client);
+			case SWORD -> tickFinisher(client, player, Phase.MACE);
+			case MACE -> tickFinisher(client, player, Phase.IDLE);
+			default -> {
+			}
+		}
+	}
+
+	private void tickAxe(Minecraft client, LocalPlayer player) {
+		if (shieldJustDisabled(client)) {
+			if (config.mode == Mode.AUTOMATIC) {
+				enterSword(client, player);
+			} else {
+				phase = Phase.STUN_TAIL;
+				tailEndsAt = System.nanoTime() + (long) (config.stunDurationSeconds * 1_000_000_000L);
+				scheduleClick(config.stunCpsMin, config.stunCpsMax);
+			}
+			return;
 		}
 
-		if (phase == Phase.STUN_TAIL && System.nanoTime() >= tailEndsAt) {
+		if (System.nanoTime() >= nextClickAt) {
+			KeyDriver.click(client.options.keyAttack);
+			scheduleClick(config.cpsMin, config.cpsMax);
+		}
+	}
+
+	private void tickStunTail(Minecraft client) {
+		if (System.nanoTime() >= tailEndsAt) {
 			stop(client);
 			return;
 		}
 
 		if (System.nanoTime() >= nextClickAt) {
 			KeyDriver.click(client.options.keyAttack);
-			if (phase == Phase.ACTIVE) {
-				scheduleClick(config.cpsMin, config.cpsMax);
-			} else {
-				scheduleClick(config.stunCpsMin, config.stunCpsMax);
-			}
+			scheduleClick(config.stunCpsMin, config.stunCpsMax);
+		}
+	}
+
+	private void tickFinisher(Minecraft client, LocalPlayer player, Phase next) {
+		if (System.nanoTime() < nextClickAt) {
+			return;
+		}
+
+		KeyDriver.click(client.options.keyAttack);
+
+		if (next == Phase.MACE) {
+			enterMace(client, player);
+		} else {
+			stop(client);
 		}
 	}
 
 	private void start(Minecraft client, LocalPlayer player) {
-		int axeSlot = findAxeHotbarSlot(player);
+		int axeSlot = findHotbarSlot(player, ItemTags.AXES);
 		if (axeSlot < 0) {
 			return;
 		}
 
 		restoreSlot = player.getInventory().getSelectedSlot();
 		targetWasBlocking = false;
-		phase = Phase.ACTIVE;
+		phase = Phase.AXE;
 		KeyDriver.click(client.options.keyHotbarSlots[axeSlot]);
+		scheduleClick(config.cpsMin, config.cpsMax);
+	}
+
+	private void enterSword(Minecraft client, LocalPlayer player) {
+		int swordSlot = findHotbarSlot(player, ItemTags.SWORDS);
+		if (swordSlot < 0) {
+			enterMace(client, player);
+			return;
+		}
+
+		phase = Phase.SWORD;
+		KeyDriver.click(client.options.keyHotbarSlots[swordSlot]);
+		scheduleClick(config.cpsMin, config.cpsMax);
+	}
+
+	private void enterMace(Minecraft client, LocalPlayer player) {
+		int maceSlot = findMaceHotbarSlot(player);
+		if (maceSlot < 0) {
+			stop(client);
+			return;
+		}
+
+		phase = Phase.MACE;
+		KeyDriver.click(client.options.keyHotbarSlots[maceSlot]);
 		scheduleClick(config.cpsMin, config.cpsMax);
 	}
 
@@ -134,11 +196,21 @@ public class SwapController {
 		return false;
 	}
 
-	private static int findAxeHotbarSlot(LocalPlayer player) {
+	private static int findMaceHotbarSlot(LocalPlayer player) {
+		Inventory inventory = player.getInventory();
+		for (int slot = 0; slot < Inventory.getSelectionSize(); slot++) {
+			if (inventory.getItem(slot).getItem() == Items.MACE) {
+				return slot;
+			}
+		}
+		return -1;
+	}
+
+	private static int findHotbarSlot(LocalPlayer player, TagKey<Item> tag) {
 		Inventory inventory = player.getInventory();
 		for (int slot = 0; slot < Inventory.getSelectionSize(); slot++) {
 			ItemStack stack = inventory.getItem(slot);
-			if (!stack.isEmpty() && stack.typeHolder().is(ItemTags.AXES)) {
+			if (!stack.isEmpty() && stack.typeHolder().is(tag)) {
 				return slot;
 			}
 		}
