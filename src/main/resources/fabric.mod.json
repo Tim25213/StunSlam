@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "shieldbreaker",
+	"version": "${version}",
+	"name": "ShieldBreaker",
+	"description": "Airborne mace-to-axe hotbar swap with timed attack input and a CPS counter.",
+	"authors": [
+		"Tim25213"
+	],
+	"contact": {
+		"sources": "https://github.com/Tim25213/StunSlam"
+	},
+	"license": "CC0-1.0",
+	"environment": "client",
+	"entrypoints": {
+		"main": [
+			"com.tim25213.shieldbreaker.ShieldBreaker"
+		],
+		"client": [
+			"com.tim25213.shieldbreaker.client.ShieldBreakerClient"
+		]
+	},
+	"mixins": [
+		{
+			"config": "shieldbreaker.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
